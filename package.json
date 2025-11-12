@@ -1,0 +1,25 @@
+{
+  "name": "ideav-local-associative-js",
+  "version": "0.1.0",
+  "description": "Proof of Concept: JS port using Bun, Express, Links Notation, and Lino tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot run src/server.mjs",
+    "start": "bun run src/server.mjs",
+    "test": "bun test",
+    "lint": "echo 'no lint configured'"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "dependencies": {
+    "@unidel2035/links-client": "github:link-foundation/links-client",
+    "express": "^4.21.1",
+    "links-notation": "^0.11.2",
+    "lino-env": "github:link-foundation/lino-env"
+  },
+  "devDependencies": {
+    "test-anywhere": "^0.2.6"
+  }
+}
