@@ -16,8 +16,8 @@ import { execSync } from 'child_process';
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join } from 'path';
 
-// TODO: Update this to match your package name in package.json
-const PACKAGE_NAME = 'my-package';
+// Package name from package.json
+const PACKAGE_NAME = 'ideav-local-associative-js';
 const CHANGESET_DIR = '.changeset';
 
 /**
