@@ -39,8 +39,18 @@ app.get('/links-cli', (_req, res) => {
   res.send("(todo: 'integrate link-cli process')\n");
 });
 
-app.listen(PORT, HOST, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Server listening on http://${HOST}:${PORT}`);
-});
+// Export app for testing
+export { app };
+export default app;
 
+// Start server only when run directly
+const isMainModule =
+  typeof import.meta.main !== 'undefined'
+    ? import.meta.main
+    : import.meta.url === `file://${process.argv[1]}`;
+
+if (isMainModule) {
+  app.listen(PORT, HOST, () => {
+    console.log(`Server listening on http://${HOST}:${PORT}`);
+  });
+}
