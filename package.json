@@ -44,6 +44,7 @@
     "bun": ">=1.0.0"
   },
   "dependencies": {
+    "@link-foundation/links-client": "^1.0.0",
     "express": "^4.21.1",
     "links-notation": "^0.11.2",
     "lino-env": "^0.2.8"
