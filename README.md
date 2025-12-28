@@ -7,7 +7,8 @@ JavaScript port of [IdeaV Local](https://github.com/ideav/local) using Bun, Expr
 - **Bun + Express server** with Links Notation endpoints
 - **Full CRUD API** for link database operations via `@link-foundation/links-client`
 - **ILinks API** compatible with Platform.Data interface
-- **lino-env** configuration via `.lenv` file
+- **CLI arguments** via `lino-arguments` for `--port`, `--host`, `--db-path`
+- **lino-arguments** configuration from CLI args, env vars, and `.lenv` file
 - **Cross-runtime testing** with `test-anywhere`
 
 ## Prerequisites
@@ -34,6 +35,14 @@ bun run dev
 
 # Production mode
 bun run start
+
+# With CLI arguments
+bun run start -- --port 8080 --host 127.0.0.1
+# or
+bun run start -- -p 8080 -h 127.0.0.1
+
+# With custom database path
+bun run start -- --db-path /path/to/db.links
 ```
 
 ## API Endpoints
@@ -155,7 +164,11 @@ curl -X POST http://localhost:3000/ilinks/delete \
 
 ## Configuration
 
-Configuration is stored in `.lenv` using Links Notation:
+Configuration supports three sources with the following priority (highest first):
+
+1. **CLI arguments**: `--port`, `--host`, `--db-path`
+2. **Environment variables**: `PORT`, `HOST`, `DB_PATH`
+3. **`.lenv` file** using Links Notation:
 
 ```
 server.port: 3000
@@ -163,7 +176,14 @@ server.host: 0.0.0.0
 db.path: data/linkdb.links
 ```
 
-Environment variables `PORT`, `HOST`, and `DB_PATH` can override these settings.
+### CLI Options
+
+| Option      | Alias | Description                | Default           |
+| ----------- | ----- | -------------------------- | ----------------- |
+| `--port`    | `-p`  | Port to listen on          | 3000              |
+| `--host`    | `-h`  | Host to bind to            | 0.0.0.0           |
+| `--db-path` | `-d`  | Path to the links database | data/linkdb.links |
+| `--help`    |       | Show help                  |                   |
 
 ## Development
 
@@ -183,13 +203,13 @@ npm run check
 
 ## Dependencies
 
-| Package                         | Purpose                         |
-| ------------------------------- | ------------------------------- |
-| `@link-foundation/links-client` | Link-cli database client        |
-| `links-notation`                | Links Notation parser/formatter |
-| `lino-env`                      | Configuration management        |
-| `express`                       | HTTP server                     |
-| `test-anywhere`                 | Cross-runtime testing           |
+| Package                         | Purpose                                |
+| ------------------------------- | -------------------------------------- |
+| `@link-foundation/links-client` | Link-cli database client               |
+| `links-notation`                | Links Notation parser/formatter        |
+| `lino-arguments`                | CLI args, env vars, and .lenv config   |
+| `express`                       | HTTP server                            |
+| `test-anywhere`                 | Cross-runtime testing (dev dependency) |
 
 ## Links
 

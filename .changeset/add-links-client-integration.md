@@ -2,16 +2,17 @@
 'ideav-local-associative-js': minor
 ---
 
-Add @link-foundation/links-client integration with full CRUD API and CI/CD pipeline
+Add @link-foundation/links-client integration with full CRUD API, CLI support, and comprehensive tests
 
 ### Features
 
 - Add @link-foundation/links-client dependency for link-cli database operations
 - Implement REST API endpoints for links CRUD operations (/links)
 - Implement ILinks API endpoints compatible with Platform.Data interface (/ilinks)
+- Add CLI arguments support via lino-arguments (--port, --host, --db-path)
+- Replace lino-env with lino-arguments for unified configuration from CLI args, env vars, and .lenv files
 - Add data directory for database storage
-- Update configuration to support db.path setting
-- Update README with complete API documentation
+- Update README with complete API documentation including CLI options
 
 ### CI/CD Pipeline
 
@@ -23,5 +24,7 @@ Add @link-foundation/links-client integration with full CRUD API and CI/CD pipel
 
 ### Testing
 
-- Add comprehensive tests for links-notation parsing
+- Add comprehensive E2E tests for all REST API routes (51 tests total)
+- Add tests for /health, /parse, /links CRUD, and /ilinks API endpoints
+- Add validation logic tests for request parsing
 - Add import tests for dependencies

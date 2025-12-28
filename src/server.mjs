@@ -1,6 +1,6 @@
 import express from 'express';
 import { Parser, formatLinks } from 'links-notation';
-import { readLinoEnv } from 'lino-env';
+import { makeConfig } from 'lino-arguments';
 import { LinkDBService, ILinks } from '@link-foundation/links-client';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,15 +9,39 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load configuration from Links Notation env file
-// If missing, defaults are used
-const env = readLinoEnv('.lenv');
-const PORT = Number(env.get('server.port')) || Number(process.env.PORT) || 3000;
-const HOST = env.get('server.host') || process.env.HOST || '0.0.0.0';
-const DB_PATH =
-  env.get('db.path') ||
-  process.env.DB_PATH ||
-  path.join(__dirname, '../data/linkdb.links');
+// Load configuration from .lenv file + CLI arguments + environment variables
+// Priority: CLI args > env vars > .lenv file > defaults
+const config = makeConfig({
+  yargs: ({ yargs, getenv }) =>
+    yargs
+      .option('port', {
+        alias: 'p',
+        type: 'number',
+        default: getenv('PORT', 3000),
+        describe: 'Port to listen on',
+      })
+      .option('host', {
+        alias: 'h',
+        type: 'string',
+        default: getenv('HOST', '0.0.0.0'),
+        describe: 'Host to bind to',
+      })
+      .option('db-path', {
+        alias: 'd',
+        type: 'string',
+        default: getenv(
+          'DB_PATH',
+          path.join(__dirname, '../data/linkdb.links')
+        ),
+        describe: 'Path to the links database file',
+      })
+      .help('help')
+      .version(false),
+});
+
+const PORT = config.port;
+const HOST = config.host;
+const DB_PATH = config.dbPath;
 
 // Initialize LinkDB service
 const linkdb = new LinkDBService(DB_PATH);
