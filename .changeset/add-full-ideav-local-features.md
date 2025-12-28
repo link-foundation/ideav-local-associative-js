@@ -1,5 +1,5 @@
 ---
-"ideav-local-associative-js": minor
+'ideav-local-associative-js': minor
 ---
 
 feat: implement full ideav/local feature set
