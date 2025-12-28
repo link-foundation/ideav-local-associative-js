@@ -1,6 +1,6 @@
 {
   "name": "ideav-local-associative-js",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "JavaScript port of IdeaV Local using Bun, Express, Links Notation, and Lino tools",
   "type": "module",
   "main": "src/index.js",
