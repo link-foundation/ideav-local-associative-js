@@ -1,5 +1,9 @@
 {
   "nodeModulesDir": "auto",
+  "imports": {
+    "path": "node:path",
+    "url": "node:url"
+  },
   "test": {
     "include": ["tests/"],
     "exclude": ["examples/", "node_modules/"]
