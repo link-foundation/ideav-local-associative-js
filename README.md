@@ -7,6 +7,10 @@ JavaScript port of [IdeaV Local](https://github.com/ideav/local) using Bun, Expr
 - **Bun + Express server** with Links Notation endpoints
 - **Full CRUD API** for link database operations via `@link-foundation/links-client`
 - **ILinks API** compatible with Platform.Data interface
+- **RecursiveLinks API** for nested data structures and Links Notation conversions
+- **Objects API** for hierarchical object storage (compatible with ideav/local data model)
+- **Filtering** capabilities with text, numeric, range, and reference operations
+- **Export/Import** support for Links Notation, JSON, and CSV formats
 - **CLI arguments** via `lino-arguments` for `--port`, `--host`, `--db-path`
 - **lino-arguments** configuration from CLI args, env vars, and `.lenv` file
 - **Cross-runtime testing** with `test-anywhere`
@@ -160,6 +164,128 @@ curl -X POST http://localhost:3000/ilinks/delete \
   -H 'Content-Type: application/json' \
   --data '{"restriction": [1]}'
 # Response: (deleted: 1)
+```
+
+### RecursiveLinks API (Nested Data Structures)
+
+Work with nested arrays and objects, converting to/from Links Notation.
+
+**Create from nested array:**
+
+```bash
+curl -X POST http://localhost:3000/recursive/from-array \
+  -H 'Content-Type: application/json' \
+  --data '{"data": [[1, 2], [3, 4]]}'
+# Response: (created: [linkId1, linkId2])
+```
+
+**Convert to Links Notation:**
+
+```bash
+curl -X POST http://localhost:3000/recursive/to-notation \
+  -H 'Content-Type: application/json' \
+  --data '{"data": [[1, 2], [3, 4]]}'
+# Response: ((1 2) (3 4))
+```
+
+**Parse Links Notation:**
+
+```bash
+curl -X POST http://localhost:3000/recursive/from-notation \
+  -H 'Content-Type: application/json' \
+  --data '{"notation": "((1 2) (3 4))"}'
+# Response: (data: [[1, 2], [3, 4]])
+```
+
+### Objects API (Hierarchical Storage)
+
+Store and manage hierarchical objects with type, parent, order, and value attributes.
+
+**Create an object:**
+
+```bash
+curl -X POST http://localhost:3000/objects \
+  -H 'Content-Type: application/json' \
+  --data '{"t": 1, "up": 0, "ord": 1, "val": 100}'
+# Response: (1: (t: 1) (up: 0) (ord: 1) (val: 100))
+```
+
+**List objects:**
+
+```bash
+curl http://localhost:3000/objects
+# With filters:
+curl "http://localhost:3000/objects?type=1&parent=0"
+```
+
+**Get object children:**
+
+```bash
+curl http://localhost:3000/objects/1/children
+```
+
+### Filtered Links API
+
+Query links with powerful filtering capabilities.
+
+**Filter links:**
+
+```bash
+curl -X POST http://localhost:3000/links/filter \
+  -H 'Content-Type: application/json' \
+  --data '{"filters": {"source": "100", "target": ">150"}, "limit": 10}'
+```
+
+**Filter operators:**
+
+- Equality: `"100"` (exact match)
+- Negation: `"!100"` (not equal)
+- Range: `"10..20"` (between 10 and 20)
+- Greater/Less: `">100"`, `"<50"`, `">=100"`, `"<=50"`
+- List: `"1,2,3"` (in list)
+- Contains: `"*text*"` (contains)
+- Starts with: `"text*"`
+- Ends with: `"*text"`
+- Reference: `"@123"` (reference to object 123)
+
+### Export/Import API
+
+Export and import links in multiple formats.
+
+**Export links:**
+
+```bash
+# Links Notation (default)
+curl http://localhost:3000/export
+
+# JSON format
+curl "http://localhost:3000/export?format=json"
+
+# CSV format
+curl "http://localhost:3000/export?format=csv"
+```
+
+**Import links:**
+
+```bash
+# Auto-detect format
+curl -X POST http://localhost:3000/import \
+  -H 'Content-Type: text/plain' \
+  --data '(1: 100 200)
+(2: 300 400)'
+
+# JSON format
+curl -X POST "http://localhost:3000/import?format=json" \
+  -H 'Content-Type: application/json' \
+  --data '[{"source": 100, "target": 200}]'
+```
+
+### API Information
+
+Get list of all available endpoints:
+
+```bash
+curl http://localhost:3000/api
 ```
 
 ## Configuration

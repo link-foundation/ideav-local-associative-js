@@ -1,9 +1,23 @@
 import express from 'express';
 import { Parser, formatLinks } from 'links-notation';
 import { makeConfig } from 'lino-arguments';
-import { LinkDBService, ILinks } from '@link-foundation/links-client';
+import {
+  LinkDBService,
+  ILinks,
+  RecursiveLinks,
+} from '@link-foundation/links-client';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+// Import API modules
+import { createRecursiveLinksRouter } from './api/recursive-links-routes.mjs';
+import { createObjectsRouter } from './api/objects-routes.mjs';
+import { filterLinks } from './api/filters.mjs';
+import {
+  exportLinks,
+  importLinks,
+  detectFormat,
+} from './api/export-import.mjs';
 
 // Get directory of current module
 const __filename = fileURLToPath(import.meta.url);
@@ -43,9 +57,10 @@ const PORT = config.port;
 const HOST = config.host;
 const DB_PATH = config.dbPath;
 
-// Initialize LinkDB service
+// Initialize LinkDB service and API instances
 const linkdb = new LinkDBService(DB_PATH);
 const ilinks = new ILinks(DB_PATH);
+const recursiveLinks = new RecursiveLinks(DB_PATH);
 
 const app = express();
 app.use(express.text({ type: ['text/plain', '*/*'] }));
@@ -383,6 +398,145 @@ app.post('/ilinks/delete', async (req, res) => {
 });
 
 // ============================================================================
+// RecursiveLinks API - Nested data structure operations
+// ============================================================================
+
+// Mount RecursiveLinks router
+app.use('/recursive', createRecursiveLinksRouter(DB_PATH));
+
+// ============================================================================
+// Objects API - Hierarchical object storage (ideav/local compatible)
+// ============================================================================
+
+// Mount Objects router
+app.use('/objects', createObjectsRouter(DB_PATH));
+
+// ============================================================================
+// Filtered Links API - Query links with filters
+// ============================================================================
+
+// POST /links/filter - Get links with filtering
+app.post('/links/filter', async (req, res) => {
+  res.type('text/plain');
+
+  try {
+    const { filters = {}, limit, offset } = req.body || {};
+
+    let links = await linkdb.readAllLinks();
+
+    // Apply filters
+    if (Object.keys(filters).length > 0) {
+      links = filterLinks(links, filters);
+    }
+
+    // Apply pagination
+    if (offset !== undefined) {
+      links = links.slice(parseInt(offset, 10));
+    }
+    if (limit !== undefined) {
+      links = links.slice(0, parseInt(limit, 10));
+    }
+
+    if (links.length === 0) {
+      res.send('()\n');
+    } else {
+      res.send(`${formatLinksAsLN(links)}\n`);
+    }
+  } catch (e) {
+    if (e.message.includes('clink command not found')) {
+      res.status(503).send("(error: 'link-cli (clink) not installed')\n");
+    } else {
+      res.status(500).send(`(error: '${String(e.message)}')\n`);
+    }
+  }
+});
+
+// ============================================================================
+// Export/Import API - Data portability
+// ============================================================================
+
+// GET /export - Export all links in specified format
+// Query params: format (ln, json, csv), pretty (true/false)
+app.get('/export', async (req, res) => {
+  try {
+    const format = req.query.format || 'ln';
+    const pretty = req.query.pretty !== 'false';
+
+    const links = await linkdb.readAllLinks();
+    const exported = exportLinks(links, format, { pretty });
+
+    // Set content type based on format
+    switch (format.toLowerCase()) {
+      case 'json':
+        res.type('application/json');
+        break;
+      case 'csv':
+        res.type('text/csv');
+        res.set(
+          'Content-Disposition',
+          'attachment; filename="links-export.csv"'
+        );
+        break;
+      default:
+        res.type('text/plain');
+    }
+
+    res.send(exported);
+  } catch (e) {
+    res.type('text/plain');
+    if (e.message.includes('clink command not found')) {
+      res.status(503).send("(error: 'link-cli (clink) not installed')\n");
+    } else {
+      res.status(500).send(`(error: '${String(e.message)}')\n`);
+    }
+  }
+});
+
+// POST /import - Import links from content
+// Body: The content to import
+// Query params: format (ln, json, csv), or auto-detect
+app.post('/import', async (req, res) => {
+  res.type('text/plain');
+
+  try {
+    const content =
+      typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    const format = req.query.format || detectFormat(content);
+
+    const linksToImport = importLinks(content, format);
+
+    if (linksToImport.length === 0) {
+      res.status(400).send("(error: 'no links found in import data')\n");
+      return;
+    }
+
+    // Create each link
+    const createdLinks = [];
+    for (const linkData of linksToImport) {
+      try {
+        const link = await linkdb.createLink(linkData.source, linkData.target);
+        createdLinks.push(link);
+      } catch (createError) {
+        // Continue with other links if one fails
+        console.error('Failed to create link:', createError.message);
+      }
+    }
+
+    res
+      .status(201)
+      .send(
+        `(imported: ${createdLinks.length})\n${formatLinksAsLN(createdLinks)}\n`
+      );
+  } catch (e) {
+    if (e.message.includes('clink command not found')) {
+      res.status(503).send("(error: 'link-cli (clink) not installed')\n");
+    } else {
+      res.status(500).send(`(error: '${String(e.message)}')\n`);
+    }
+  }
+});
+
+// ============================================================================
 // Legacy endpoint for backward compatibility
 // ============================================================================
 
@@ -394,8 +548,51 @@ app.get('/links-cli', (_req, res) => {
   );
 });
 
-// Export app for testing
-export { app, linkdb, ilinks };
+// ============================================================================
+// API Information endpoint
+// ============================================================================
+
+// GET /api - List all available API endpoints
+app.get('/api', (_req, res) => {
+  res.type('text/plain');
+  res.send(`(api:
+  (health: GET /health)
+  (parse: POST /parse)
+  (links:
+    (list: GET /links)
+    (get: GET /links/:id)
+    (create: POST /links)
+    (update: PUT /links/:id)
+    (delete: DELETE /links/:id)
+    (filter: POST /links/filter))
+  (ilinks:
+    (count: POST /ilinks/count)
+    (each: POST /ilinks/each)
+    (create: POST /ilinks/create)
+    (update: POST /ilinks/update)
+    (delete: POST /ilinks/delete))
+  (recursive:
+    (fromArray: POST /recursive/from-array)
+    (fromObject: POST /recursive/from-object)
+    (toArray: POST /recursive/to-array)
+    (toNotation: POST /recursive/to-notation)
+    (fromNotation: POST /recursive/from-notation)
+    (ilinks: GET /recursive/ilinks))
+  (objects:
+    (list: GET /objects)
+    (get: GET /objects/:id)
+    (create: POST /objects)
+    (update: PUT /objects/:id)
+    (delete: DELETE /objects/:id)
+    (children: GET /objects/:id/children)
+    (reorder: POST /objects/:id/reorder))
+  (export: GET /export)
+  (import: POST /import))
+`);
+});
+
+// Export app and services for testing
+export { app, linkdb, ilinks, recursiveLinks };
 export default app;
 
 // Start server only when run directly
